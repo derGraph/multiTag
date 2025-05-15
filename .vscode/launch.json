@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Zephyr IDE: Debug",
+            "cwd": "${workspaceFolder}",
+            "gdbPath": "${command:zephyr-ide.get-gdb-path}",
+            "executable": "${command:zephyr-ide.get-active-build-path}/zephyr/zephyr.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "device": "nrf51",
+            "runToEntryPoint": "main",
+            "configFiles": [
+ 				"interface/stlink.cfg",
+ 				"target/nrf51.cfg"
+ 			]
+        }
+    ]
+}
