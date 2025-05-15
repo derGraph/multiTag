@@ -1,0 +1,6 @@
+board:
+  name: ibuttonmini
+  full_name: iButton mini
+  vendor: derGraph
+  socs:
+  - name: nrf51822
