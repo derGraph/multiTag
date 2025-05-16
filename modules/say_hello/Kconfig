@@ -1,0 +1,7 @@
+# Create a new option in menuconfig
+config SAY_HELLO
+    bool "Basic print test to console"
+    default n   # Set the library to be disabled by default
+    depends on PRINTK   # Make it dependent on PRINTK
+    help
+        Adds say_hello() function to print a basic message to the console.
