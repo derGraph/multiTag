@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
-#include "fhn_eid_generator.h"
+#include "google_fhd.h"
 
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
@@ -23,9 +23,15 @@
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
 
+GoogleFhd googleFhd;
+
 int main(void)
 {
 	int ret;
+
+	if(googleFhd.init() < 0){
+		return 0;
+	}
 
 	if (!gpio_is_ready_dt(&led)) {
 		return 0;

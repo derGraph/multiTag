@@ -1,4 +1,4 @@
-name: say_hello
+name: google_fhd
 build:
   cmake: .
   kconfig: Kconfig

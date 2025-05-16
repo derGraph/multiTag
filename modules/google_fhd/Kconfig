@@ -1,7 +1,10 @@
 # Create a new option in menuconfig
-config SAY_HELLO
+config GOOGLE_FHD
     bool "Basic print test to console"
     default n   # Set the library to be disabled by default
-    depends on PRINTK   # Make it dependent on PRINTK
+    select CONFIG_MBEDTLS
+    select CONFIG_MBEDTLS_BUILTIN
+    select CONFIG_MBEDTLS_PSA_CRYPTO_C
+
     help
         Adds say_hello() function to print a basic message to the console.
