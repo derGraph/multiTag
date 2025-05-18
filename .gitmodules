@@ -1,3 +1,6 @@
 [submodule "modules/google_fhd/micro-ecc"]
 	path = modules/google_fhd/micro-ecc
 	url = https://github.com/kmackay/micro-ecc.git
+[submodule "modules/google_fhd/tiny-AES-c"]
+	path = modules/google_fhd/tiny-AES-c
+	url = https://github.com/kokke/tiny-AES-c
