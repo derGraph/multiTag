@@ -2,9 +2,7 @@
 config GOOGLE_FHD
     bool "Basic print test to console"
     default n   # Set the library to be disabled by default
-    select CONFIG_MBEDTLS
-    select CONFIG_MBEDTLS_BUILTIN
-    select CONFIG_MBEDTLS_PSA_CRYPTO_C
+    default n if MBEDTLS && MBEDTLS_BUILTIN && CUSTOM_MBEDTLS_CFG_FILE
 
     help
         Adds say_hello() function to print a basic message to the console.
