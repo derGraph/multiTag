@@ -12,6 +12,11 @@ if(CONFIG_GOOGLE_FHD)
       # Inject the VLI API define into this library’s compile flags
     zephyr_library_compile_definitions(
         uECC_ENABLE_VLI_API=1
+        uECC_SUPPORTS_secp256k1=0
+        uECC_SUPPORTS_secp256r1=0
+        uECC_SUPPORTS_secp224r1=0
+        uECC_SUPPORTS_secp192r1=0
+        uECC_OPTIMIZATION_LEVEL=0
         AES128=1
         ECB=1
     )

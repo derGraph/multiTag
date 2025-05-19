@@ -9,8 +9,9 @@ class GoogleFhd {
         int init();
         int setEIK(char* hexStr);
         int generate_eid_160(uint32_t timestamp, uint8_t eid[20]);
+        void hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t len);
+        void bytes_to_hex_string(const uint8_t *bytes, char *output, size_t len);
     private:
         bool initialized;
-        void hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t len);
 };
 #endif /* GOOGLE_FHD_ */

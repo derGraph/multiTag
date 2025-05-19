@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/bluetooth/bluetooth.h>
 #include "google_fhd.h"
 
 /* 1000 msec = 1 sec */
@@ -40,6 +41,8 @@ int main(void)
 	}
 	uint8_t new_eid[20];
 	googleFhd.generate_eid_160(0, new_eid);
+	char *eid_string;
+	googleFhd.bytes_to_hex_string(new_eid, eid_string, sizeof(new_eid));
 
 	if (!gpio_is_ready_dt(&led)) {
 		return 0;
@@ -61,6 +64,7 @@ int main(void)
 
 	while (1) {
 		if(gpio_pin_get_dt(&button)){
+
 			ret = gpio_pin_toggle_dt(&led);
 			if (ret < 0) {
 				return 0;

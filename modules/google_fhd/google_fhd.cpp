@@ -6,7 +6,6 @@
 
 #include "aes.hpp"
 
-
 #include "uECC_vli.h"
 
 #include "uECC.h"
@@ -15,6 +14,10 @@
 #define ROTATION_PERIOD (1 << ROTATION_EXPONENT)
 
 #include "google_fhd.h"
+
+#if uECC_SUPPORTS_secp224r1
+    #define uECC_SUPPORTS_secp224r1 0
+#endif
 
 GoogleFhd::GoogleFhd()
 {
@@ -85,6 +88,13 @@ void GoogleFhd::hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t len)
     for (size_t i = 0; i < len; i++) {
         sscanf(hex + 2 * i, "%2hhx", &bytes[i]);
     }
+}
+
+void GoogleFhd::bytes_to_hex_string(const uint8_t *bytes, char *output, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        sprintf(output + i * 2, "%02x", bytes[i]);  // or "%02X" for uppercase hex
+    }
+    output[len * 2] = '\0';  // Null-terminate the string
 }
 
 int GoogleFhd::setEIK(char* hexStr) {
