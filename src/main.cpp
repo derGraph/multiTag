@@ -63,7 +63,7 @@ int main(void)
 
     /* Advertising parameters: connectable + name in scan response */
     static const struct bt_le_adv_param *adv_params = BT_LE_ADV_PARAM(
-        BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_NAME,
+        BT_LE_ADV_OPT_CONN,
         BT_GAP_ADV_FAST_INT_MIN_2,
         BT_GAP_ADV_FAST_INT_MAX_2,
         NULL
@@ -86,14 +86,12 @@ int main(void)
     };
 
     /* Start advertising */
-    err = bt_le_adv_start(adv_params,
-                          ad, ARRAY_SIZE(ad),
-                          sd, ARRAY_SIZE(sd));
+    err = bt_le_adv_start(adv_params, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
         printk("Advertising failed to start (err %d)\n", err);
         return 0;
     }
-    printk("Advertising successfully started\n");
+    //printk("Advertising successfully started\n");
 
     /* Initialize Google FHD and generate an EID */
     if (googleFhd.init() < 0) {
@@ -133,10 +131,10 @@ int main(void)
 			err = bt_gatt_notify(
 				/* conn = */ nullptr,
 				/* attr = */ &multiTag.attrs[1],
-				/* data = */ notify_value,
-				/* length = */ sizeof(notify_value)
+				/* data = */ new_eid,
+				/* length = */ sizeof(new_eid)
 			);
-			
+
 			notify_value[0]++;
 
 			if (err) {
