@@ -131,8 +131,8 @@ int main(void)
 			err = bt_gatt_notify(
 				/* conn = */ nullptr,
 				/* attr = */ &multiTag.attrs[1],
-				/* data = */ new_eid,
-				/* length = */ sizeof(new_eid)
+				/* data = */ notify_value,
+				/* length = */ sizeof(notify_value)
 			);
 
 			notify_value[0]++;
