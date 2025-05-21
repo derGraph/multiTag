@@ -84,10 +84,24 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     return 0;
 }
 
-void GoogleFhd::hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        sscanf(hex + 2 * i, "%2hhx", &bytes[i]);
+int GoogleFhd::hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        uint8_t high = hex_char_to_val(hex[2 * i]);
+        uint8_t low  = hex_char_to_val(hex[2 * i + 1]);
+        if (high == 0xFF || low == 0xFF) {
+            return -1; // Invalid hex input
+        }
+        bytes[i] = (high << 4) | low;
     }
+    return 0;
+}
+
+/* Convert 2 hex characters to a byte */
+uint8_t GoogleFhd::hex_char_to_val(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return 0xFF; // Invalid
 }
 
 void GoogleFhd::bytes_to_hex_string(const uint8_t *bytes, char *output, size_t len) {
