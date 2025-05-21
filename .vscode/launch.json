@@ -14,7 +14,6 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             "device": "nrf51",
-            "runToEntryPoint": "main",
             "configFiles": [
  				"interface/stlink.cfg",
  				"target/nrf51.cfg"
