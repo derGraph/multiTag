@@ -14,6 +14,8 @@
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
 
+#define DISABLE_BT
+
 /* Devicetree node identifiers */
 #define LED0_NODE DT_ALIAS(led0)
 #define BUTTON0_NODE DT_ALIAS(sw0)
@@ -53,6 +55,7 @@ int main(void)
 {
     int err, ret;
 
+    #ifndef DISABLE_BT
     /* Initialize BLE subsystem */
     err = bt_enable(NULL);
     if (err) {
@@ -60,6 +63,7 @@ int main(void)
         return 0;
     }
     printk("Bluetooth initialized\n");
+    #endif
 
     /* Advertising parameters: connectable + name in scan response */
     static const struct bt_le_adv_param *adv_params = BT_LE_ADV_PARAM(
@@ -85,14 +89,15 @@ int main(void)
                 sizeof(CONFIG_BT_DEVICE_NAME) - 1),
     };
 
+    #ifndef DISABLE_BT
     /* Start advertising */
     err = bt_le_adv_start(adv_params, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
         printk("Advertising failed to start (err %d)\n", err);
         return 0;
     }
-    //printk("Advertising successfully started\n");
-
+    printk("Advertising successfully started\n");
+    #endif
     /* Initialize Google FHD and generate an EID */
     if (googleFhd.init() < 0) {
         printk("GoogleFhd init failed\n");
@@ -128,6 +133,7 @@ int main(void)
         if (gpio_pin_get_dt(&button)) {
             gpio_pin_toggle_dt(&led);
 
+            #ifndef DISABLE_BT
 			err = bt_gatt_notify(
 				/* conn = */ nullptr,
 				/* attr = */ &multiTag.attrs[1],
@@ -142,6 +148,7 @@ int main(void)
 			} else {
 				printk("Notification sent: %02x\n", notify_value[0]);
 			}
+            #endif
 
 
             while (gpio_pin_get_dt(&button)) {
