@@ -33,7 +33,7 @@ int GoogleFhd::init()
 
 int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     uint8_t input[32];
-    uint8_t r_prime[32];
+    uint8_t r_dash[32];
     uint8_t r_bytes[20];
     uint8_t pub[40];
     struct AES_ctx ctx;
@@ -57,18 +57,20 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     AES_init_ctx(&ctx, eik);
 
     // 3) Encrypt two 16-byte blocks in ECB mode
-    memcpy(r_prime +  0, input +  0, 16);
-    AES_ECB_encrypt(&ctx, r_prime +  0);
-    memcpy(r_prime + 16, input + 16, 16);
-    AES_ECB_encrypt(&ctx, r_prime + 16);
+    memcpy(r_dash +  0, input +  0, 16);
+    AES_ECB_encrypt(&ctx, r_dash);
+    memcpy(r_dash + 16, input + 16, 16);
+    AES_ECB_encrypt(&ctx, r_dash + 16);
 
-    // 4) Reduce r_prime modulo the curve order n
+    //VALIDATED UNTIL HERE
+
+    // 4) Reduce r_dash modulo the curve order n
     const struct uECC_Curve_t *curve = uECC_secp160r1();
     unsigned curve_bytes = uECC_curve_num_bytes(curve);
     uint32_t native[10] = {0};       // holds up to 320-bit value
     uint32_t n_native[10] = {0};
 
-    uECC_vli_bytesToNative(native, r_prime, 32);
+    uECC_vli_bytesToNative(native, r_dash, 32);
     uECC_vli_bytesToNative(n_native, (const uint8_t*)uECC_curve_n(curve), curve_bytes);
     uECC_vli_mmod(native, native, n_native, curve_bytes / sizeof(uint32_t));
     uECC_vli_nativeToBytes(r_bytes, curve_bytes, native);
