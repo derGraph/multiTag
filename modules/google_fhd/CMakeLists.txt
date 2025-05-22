@@ -17,7 +17,7 @@ if(CONFIG_GOOGLE_FHD)
         uECC_SUPPORTS_secp224r1=0
         uECC_SUPPORTS_secp192r1=0
         uECC_OPTIMIZATION_LEVEL=0
-        AES128=1
+        AES256=1
         ECB=1
     )
 
