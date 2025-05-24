@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <zephyr/sys/byteorder.h>
 
+extern "C" {
+    #include "tfm.h"
+}
 #include "aes.hpp"
 
 #include "uECC_vli.h"
@@ -18,6 +21,8 @@
 #if uECC_SUPPORTS_secp224r1
     #define uECC_SUPPORTS_secp224r1 0
 #endif
+
+fp_int a, b, c;
 
 GoogleFhd::GoogleFhd()
 {
@@ -34,8 +39,8 @@ int GoogleFhd::init()
 int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     uint8_t input[32];
     uint8_t r_dash[32];
-    uint8_t r_bytes[20];
-    uint8_t pub[40];
+    const struct uECC_Curve_t *curve = uECC_secp160r1();
+    int num_bytes = uECC_curve_num_bytes(curve); // should be 20 bytes for SECP160R1
     struct AES_ctx ctx;
 
     // 1) Build the 32-byte AES input
@@ -64,25 +69,34 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
 
     //VALIDATED UNTIL HERE
 
-    // 4) Reduce r_dash modulo the curve order n
-    const struct uECC_Curve_t *curve = uECC_secp160r1();
-    unsigned curve_bytes = uECC_curve_num_bytes(curve);
-    uint32_t native[10] = {0};       // holds up to 320-bit value
-    uint32_t n_native[10] = {0};
+    // Step 1: Convert r_dash (32 bytes) into a big integer using tomsfastmath
+    fp_int r_dash_int, n, r;
+    fp_init(&r_dash_int);
+    fp_init(&n);
+    fp_init(&r);
 
-    uECC_vli_bytesToNative(native, r_dash, 32);
-    uECC_vli_bytesToNative(n_native, (const uint8_t*)uECC_curve_n(curve), curve_bytes);
-    uECC_vli_mmod(native, native, n_native, curve_bytes / sizeof(uint32_t));
-    uECC_vli_nativeToBytes(r_bytes, curve_bytes, native);
+    fp_read_unsigned_bin(&r_dash_int, (uint8_t *)r_dash, 32);
 
-    // 5) Compute EC point R = r * G
-    if (!uECC_compute_public_key(r_bytes, pub, curve)) {
-        return -1;
-    }
+    // Step 2: Load the order of the curve (n)
+    const uint8_t *curve_n = (const uint8_t *)uECC_curve_n(curve);
+    fp_read_unsigned_bin(&n, (uint8_t *)curve_n, num_bytes);
 
-    // 6) Copy X-coordinate as EID
-    memcpy(eid, pub, curve_bytes);
+    // Step 3: r = r_dash_int mod n
+    fp_mod(&r_dash_int, &n, &r);
 
+    // Step 4: Convert r (fp_int) to byte array for uECC (pad to num_bytes)
+    uint8_t r_bytes[20] = {0};
+    uint8_t tmp[20] = {0};
+    int r_size = fp_unsigned_bin_size(&r);
+    fp_to_unsigned_bin(&r, tmp);
+    memcpy(&r_bytes[num_bytes - r_size], tmp, r_size); // left-pad
+
+    // Step 5: Compute R = r * G
+    uint8_t R[40]; // 2 * num_bytes
+    uECC_compute_public_key(r_bytes, R, curve);
+
+    // Step 6: Return x-coordinate (first 20 bytes)
+    memcpy(eid, R, 20);
     return 0;
 }
 

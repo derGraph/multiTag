@@ -4,3 +4,6 @@
 [submodule "modules/google_fhd/tiny-AES-c"]
 	path = modules/google_fhd/tiny-AES-c
 	url = https://github.com/kokke/tiny-AES-c
+[submodule "modules/google_fhd/tomsfastmath"]
+	path = modules/google_fhd/tomsfastmath
+	url = https://github.com/libtom/tomsfastmath.git

@@ -8,8 +8,10 @@ if(CONFIG_GOOGLE_FHD)
     zephyr_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
     zephyr_library_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/micro-ecc)
     zephyr_library_include_directories(${CMAKE_CURRENT_SOURCE_DIR}/tiny-AES-c)
-    
-      # Inject the VLI API define into this library’s compile flags
+
+    add_subdirectory(tomsfastmath EXCLUDE_FROM_ALL)
+    target_link_libraries(${ZEPHYR_CURRENT_LIBRARY} PRIVATE tomsfastmath)
+
     zephyr_library_compile_definitions(
         uECC_ENABLE_VLI_API=1
         uECC_SUPPORTS_secp256k1=0
@@ -19,6 +21,7 @@ if(CONFIG_GOOGLE_FHD)
         uECC_OPTIMIZATION_LEVEL=0
         AES256=1
         ECB=1
+        TFM_ARM=1
     )
 
     # Add your main source file
