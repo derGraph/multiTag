@@ -25,7 +25,7 @@ static const struct gpio_dt_spec led    = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
 
 /* EIK string */
-static char *eik_string = "2ba7b1af37bb6606deb507fc13f4b9d4697e88c80c5165b56c2de4cfe15996e1";
+static char *eik_string = "2ba7b1af37bb6606deb507fc13f4b9d4697e88c80c5165b56c2de4cfe15996e2";
 
 /* Single 128-bit UUID (little-endian) */
 #define MY_UUID_BYTES \
@@ -111,6 +111,7 @@ int main(void)
     googleFhd.generate_eid_160(0, new_eid);
     char eid_string[41];
     googleFhd.bytes_to_hex_string(new_eid, eid_string, sizeof(new_eid));
+    printk("EID: %s\n", eid_string);
 
     /* Configure LEDs and buttons */
     if (!gpio_is_ready_dt(&led) || !gpio_is_ready_dt(&button)) {
