@@ -18,12 +18,6 @@ extern "C" {
 
 #include "google_fhd.h"
 
-#if uECC_SUPPORTS_secp224r1
-    #define uECC_SUPPORTS_secp224r1 0
-#endif
-
-fp_int a, b, c;
-
 GoogleFhd::GoogleFhd()
 {
     initialized = false;
@@ -38,7 +32,7 @@ int GoogleFhd::init()
 
 int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     uint8_t input[32];
-    uint8_t r_dash[32];
+    uint8_t __aligned(4) r_dash[32];
     const struct uECC_Curve_t *curve = uECC_secp160r1();
     int num_bytes = uECC_curve_num_bytes(curve); // should be 20 bytes for SECP160R1
     struct AES_ctx ctx;
@@ -75,6 +69,8 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     fp_init(&n);
     fp_init(&r);
 
+
+    //CRASHES HERE
     fp_read_unsigned_bin(&r_dash_int, (uint8_t *)r_dash, 32);
 
     // Step 2: Load the order of the curve (n)

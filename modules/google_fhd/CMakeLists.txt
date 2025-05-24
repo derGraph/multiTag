@@ -21,6 +21,7 @@ if(CONFIG_GOOGLE_FHD)
         uECC_OPTIMIZATION_LEVEL=0
         AES256=1
         ECB=1
+        TFM_NO_ASM=1
     )
 
     # Add your main source file
