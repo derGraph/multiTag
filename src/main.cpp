@@ -11,6 +11,7 @@
 #include <zephyr/bluetooth/gatt.h>
 #include "google_fhd.h"
 
+
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
 
@@ -27,6 +28,7 @@ static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
 /* EIK string */
 static char *eik_string = "2ba7b1af37bb6606deb507fc13f4b9d4697e88c80c5165b56c2de4cfe15996e2";
 
+#ifndef DISABLE_BT
 /* Single 128-bit UUID (little-endian) */
 #define MY_UUID_BYTES \
     BT_UUID_128_ENCODE(0x9cc97f6b, 0x23fe, 0x4930, 0x8f36, 0xf54460d63f57)
@@ -48,6 +50,7 @@ BT_GATT_SERVICE_DEFINE(multiTag,
                            NULL, NULL, NULL),
     BT_GATT_CCC(NULL, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
+#endif
 
 GoogleFhd googleFhd;
 
@@ -63,8 +66,7 @@ int main(void)
         return 0;
     }
     printk("Bluetooth initialized\n");
-    #endif
-
+    
     /* Advertising parameters: connectable + name in scan response */
     static const struct bt_le_adv_param *adv_params = BT_LE_ADV_PARAM(
         BT_LE_ADV_OPT_CONN,
@@ -89,7 +91,6 @@ int main(void)
                 sizeof(CONFIG_BT_DEVICE_NAME) - 1),
     };
 
-    #ifndef DISABLE_BT
     /* Start advertising */
     err = bt_le_adv_start(adv_params, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
