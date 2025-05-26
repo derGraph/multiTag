@@ -4,3 +4,7 @@
 [submodule "modules/google_fhd/tiny-AES-c"]
 	path = modules/google_fhd/tiny-AES-c
 	url = https://github.com/kokke/tiny-AES-c
+
+[submodule "modules/google_fhd/tiny-bignum-c"]
+	path = modules/google_fhd/tiny-bignum-c
+	url = https://github.com/kokke/tiny-bignum-c.git
