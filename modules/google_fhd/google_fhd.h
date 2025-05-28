@@ -14,8 +14,7 @@ class GoogleFhd {
     private:
         bool initialized;
         static uint8_t hex_char_to_val(char c);
-        int compare_20be(const uint8_t* a, const uint8_t* b);
-        void mod_reduce_160bit(const uint8_t* r_dash, uint8_t* r_mod);
-        bool compute_eid_from_r_dash(const uint8_t* r_dash, uint8_t* eid_out);
+        uint8_t hexCharToUint(char c);
+        int bignum_from_string(struct bn* n, char* str, int nbytes);
 };
 #endif /* GOOGLE_FHD_ */
