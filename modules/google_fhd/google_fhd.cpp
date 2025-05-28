@@ -205,7 +205,7 @@ int GoogleFhd::bignum_from_string(struct bn* n, char* str, int nbytes){
     }
 
     printk("\n");
-
+    //RECHECK THIS LOOP, FIRST String WORD is not processed (last output)
     for(int a = nbytes - (2 * WORD_SIZE); a>0; a-=(WORD_SIZE * 2)){
         DTYPE tmp = 0;
         for (int k = 0; k < (WORD_SIZE * 2); k++) {
