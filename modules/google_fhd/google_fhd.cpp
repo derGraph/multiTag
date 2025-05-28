@@ -61,15 +61,15 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     memcpy(r_dash + 16, input + 16, 16);
     AES_ECB_encrypt(&ctx, r_dash + 16);
 
-    //VALIDATED UNTIL HERE
-
+    // 4) Convert r_dash to bignum and compute r' mod n
+    // Initialize bignum structures
     struct bn r_dash_bn;
     struct bn n_bn;
-    struct bn result_bn;
+    struct bn r_bn;
 
     bignum_init(&r_dash_bn);
     bignum_init(&n_bn);
-    bignum_init(&result_bn);
+    bignum_init(&r_bn);
 
     // Convert r_dash (uint8_t array) to a hex string for bignum_from_string_manual
     char r_dash_hex_str[(32 * 2)]; // Each byte is 2 hex chars, plus null terminator
@@ -77,34 +77,30 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
         sprintf(&r_dash_hex_str[i * 2], "%.02x", r_dash[i]);
     }
     
-    // Use your new manual parsing function
     bignum_from_string(&r_dash_bn, r_dash_hex_str, sizeof(r_dash_hex_str)); // -1 to exclude null terminator
-    // Get the curve order 'n' bytes (big-endian)
-    //const uint32_t *curve_n_bytes = uECC_curve_n(curve);
-    
-    // Use your new manual parsing function
-    char curve[] = "000000010000000000000000001f4c8f927aed3ca7522570";
-    if(bignum_from_string(&n_bn, curve, 48) == -1){
+
+    if(bignum_from_string(&n_bn, "0000000100000000000000000001f4c8f927aed3ca752257", 48) == -1){
         printk("Error converting n to bignum\n");
         return -1; // Error: failed to convert n to bignum
     }
 
     // Calculate r = r' mod n
-    bignum_mod(&r_dash_bn, &n_bn, &result_bn);
+    bignum_mod(&r_dash_bn, &n_bn, &r_bn);
 
-    char result_hex_str[40];
-    bignum_to_string(&result_bn, result_hex_str, sizeof(result_hex_str));
-    printk("r_dash_int n = %s\n", result_hex_str);
+    char r_hex[37];
+    bignum_to_string(&r_bn, r_hex, sizeof(r_hex)/sizeof(r_hex[0]));
+    printk("r = %s\n", r_hex);
 
-    // Now, 'result_bn' holds the value of (r_dash_int % n)
-    // You can convert it back to a string or use it in further bignum operations.
-    char final_r_str[BN_ARRAY_SIZE * 2 * WORD_SIZE + 1];
+    // VALIDATED UNTIL HERE
+
     //bignum_to_string(&result_bn, final_r_str, sizeof(final_r_str));
     //printk("r_dash_int %% n = %s\n", final_r_str);
 
     // Step 5: Compute R = r * G
     uint8_t R[40]; // 2 * num_bytes
-    //uECC_compute_public_key(r_bytes, R, curve);
+    uint8_t r_bytes[21]; // 21 bytes for SECP160R1 private key
+    const struct uECC_Curve_t *curve = uECC_secp160r1();
+    uECC_compute_public_key(r_bytes, R, curve);
 
     // Step 6: Return x-coordinate (first 20 bytes)
     memcpy(eid, R, 20);
@@ -204,9 +200,8 @@ int GoogleFhd::bignum_from_string(struct bn* n, char* str, int nbytes){
         n->array[k] = 0;
     }
 
-    printk("\n");
     //RECHECK THIS LOOP, FIRST String WORD is not processed (last output)
-    for(int a = nbytes - (2 * WORD_SIZE); a>0; a-=(WORD_SIZE * 2)){
+    for(int a = nbytes - (2 * WORD_SIZE); a>=0; a-=(WORD_SIZE * 2)){
         DTYPE tmp = 0;
         for (int k = 0; k < (WORD_SIZE * 2); k++) {
             char current_char = str[a + k];
@@ -217,15 +212,38 @@ int GoogleFhd::bignum_from_string(struct bn* n, char* str, int nbytes){
                 printk("Error: Invalid hex character '%c' at index %d\n", current_char, a + k);
                 return -1; // Abort on error
             }
-            printk("%c", current_char);
-            k_sleep(K_MSEC(100));
             tmp = (tmp << 4) | hex_val; // Shift existing bits left by 4, then OR in new hex value
         }
         n->array[j] = tmp;
         j += 1;
     }
-    printk("\n");
     return 0; // Successfully parsed the string into the bignum structure
+}
+
+int GoogleFhd::bignum_to_string(struct bn* n, char str[], int size) {
+    char temp[BN_ARRAY_SIZE*2*WORD_SIZE +1] = ""; // +1 for null terminator
+    for(int i = BN_ARRAY_SIZE-1; i >= 0; i--) {
+        char word[WORD_SIZE * 2 + 1]; // +1 for null terminator
+        sprintf(word, "%08x", n->array[i]);
+        strcat(temp, word);
+    }
+    int j = 0;
+    char new_temp[BN_ARRAY_SIZE*2*WORD_SIZE +1] = ""; // +1 for null terminator
+    for(int i = 0; i < (BN_ARRAY_SIZE * 2 * WORD_SIZE + 1); i++) {
+        if(temp[i] != '0'){
+            new_temp[j] = temp[i];
+            j++;
+        }
+        if(temp[i] == '\000'){
+            break; // Stop at the first null character
+        }
+    }
+    if(strlen(new_temp)+1 > size) {
+        printk("bignum_to_string: string size is too small\n");
+        return -1; // Error: string size is too small
+    }
+    strcpy(str, new_temp);
+    return 0;
 }
 
 void check(bool condition, const char* message) {
