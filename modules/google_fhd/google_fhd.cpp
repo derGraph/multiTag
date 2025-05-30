@@ -289,10 +289,7 @@ int GoogleFhd::bignum_from_bytes(struct bn* n, const uint8_t* bytes, int nbytes)
             //WORKING
             uint8_t hex_val = bytes[word + byte];
             tmp = (tmp << 8) | hex_val; // Shift existing bits left by 8, then OR in new hex value
-            printk("word = %i, byte = %i\n", word, byte);
-            printk("tmp = %08x\n", tmp);
         }
-        k_sleep(K_MSEC(100)); // Simulate some delay for debugging purposes
         n->array[j] = tmp;
         j += 1;
     }
