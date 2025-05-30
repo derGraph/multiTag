@@ -17,5 +17,6 @@ class GoogleFhd {
         uint8_t hexCharToUint(char c);
         int bignum_from_string(struct bn* n, char* str, int nbytes);
         int bignum_to_string(struct bn* n, char str[], int size);
+        int bignum_from_bytes(struct bn* n, const uint8_t* bytes, int nbytes);
 };
 #endif /* GOOGLE_FHD_ */

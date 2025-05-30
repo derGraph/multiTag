@@ -66,19 +66,17 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     struct bn r_dash_bn;
     struct bn n_bn;
     struct bn r_bn;
+    struct bn test_bn;
 
     bignum_init(&r_dash_bn);
     bignum_init(&n_bn);
     bignum_init(&r_bn);
 
-    // Convert r_dash (uint8_t array) to a hex string for bignum_from_string_manual
-    char r_dash_hex_str[(32 * 2)]; // Each byte is 2 hex chars, plus null terminator
-    for(int i = 0; i < sizeof(r_dash); ++i) {
-        sprintf(&r_dash_hex_str[i * 2], "%.02x", r_dash[i]);
-    }
-    
-    bignum_from_string(&r_dash_bn, r_dash_hex_str, sizeof(r_dash_hex_str)); // -1 to exclude null terminator
+    bignum_init(&test_bn);
 
+    bignum_from_bytes(&r_dash_bn, r_dash, sizeof(r_dash)); // Convert r_dash to bignum
+
+    // TRY TO GET N FROM uECC_secp160r1
     if(bignum_from_string(&n_bn, "0000000100000000000000000001f4c8f927aed3ca752257", 48) == -1){
         printk("Error converting n to bignum\n");
         return -1; // Error: failed to convert n to bignum
@@ -98,6 +96,7 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
 
     // Step 5: Compute R = r * G
     uint8_t R[40]; // 2 * num_bytes
+    // COMPUTE R WITH BIGNUM LIBRARY THEN CONVERT WITH hex_string_to_bytes
     uint8_t r_bytes[21]; // 21 bytes for SECP160R1 private key
     const struct uECC_Curve_t *curve = uECC_secp160r1();
     uECC_compute_public_key(r_bytes, R, curve);
@@ -220,7 +219,7 @@ int GoogleFhd::bignum_from_string(struct bn* n, char* str, int nbytes){
     return 0; // Successfully parsed the string into the bignum structure
 }
 
-int GoogleFhd::bignum_to_string(struct bn* n, char str[], int size) {
+int GoogleFhd::bignum_to_string(struct bn* n, char str[], int size){
     char temp[BN_ARRAY_SIZE*2*WORD_SIZE +1] = ""; // +1 for null terminator
     for(int i = BN_ARRAY_SIZE-1; i >= 0; i--) {
         char word[WORD_SIZE * 2 + 1]; // +1 for null terminator
@@ -244,6 +243,60 @@ int GoogleFhd::bignum_to_string(struct bn* n, char str[], int size) {
     }
     strcpy(str, new_temp);
     return 0;
+}
+
+int GoogleFhd::bignum_from_bytes(struct bn* n, const uint8_t* bytes, int nbytes) {
+
+    if(n==NULL){
+        printk("bignum_from_bytes: n is NULL\n");
+        return -1; // Error: null pointer
+    }
+
+    if(bytes==NULL){
+        printk("bignum_from_bytes: bytes is NULL\n");
+        return -1; // Error: null pointer
+    }
+    if(nbytes <= 0) {
+        printk("bignum_from_bytes: nbytes must be positive\n");
+        return -1; // Error: invalid size
+    }
+    if((nbytes & 1) != 0) {
+        printk("bignum_from_bytes: string format must be in hex -> equal number of bytes\n");
+        return -1; // Error: invalid format
+    }
+    if((nbytes % (sizeof(DTYPE) * 2)) != 0) {
+        printk("bignum_from_bytes: string length must be a multiple of (sizeof(DTYPE) * 2) characters\n");
+        return -1; // Error: invalid length
+    }
+
+    bignum_init(n);
+
+    // Calculate starting index to read the last 'WORD_SIZE_HEX_CHARS' hex characters first.
+    // We want to process the string from right to left, in chunks.
+    int j = 0; // Index for resultBn->array
+
+    // It's good practice to clear the array before populating,
+    // especially if not all elements will be filled.
+    // In a Zephyr environment, you might use memset.
+    // (Note: This is a loop for clarity; memset would be faster)
+    for (size_t k = 0; k < BN_ARRAY_SIZE; ++k) {
+        n->array[k] = 0;
+    }
+
+    for(int word = nbytes - WORD_SIZE; word >= 0; word -= WORD_SIZE) {
+        DTYPE tmp = 0;
+        for (int byte = 0; byte < WORD_SIZE; byte++) {
+            //WORKING
+            uint8_t hex_val = bytes[word + byte];
+            tmp = (tmp << 8) | hex_val; // Shift existing bits left by 8, then OR in new hex value
+            printk("word = %i, byte = %i\n", word, byte);
+            printk("tmp = %08x\n", tmp);
+        }
+        k_sleep(K_MSEC(100)); // Simulate some delay for debugging purposes
+        n->array[j] = tmp;
+        j += 1;
+    }
+    return 0; // Successfully parsed the string into the bignum structure
 }
 
 void check(bool condition, const char* message) {
