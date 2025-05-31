@@ -15,15 +15,15 @@
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
 
-#define DISABLE_BT
+//#define DISABLE_BT
 
 /* Devicetree node identifiers */
-//#define LED0_NODE DT_ALIAS(led0)
-//#define BUTTON0_NODE DT_ALIAS(sw0)
+#define LED0_NODE DT_ALIAS(led0)
+#define BUTTON0_NODE DT_ALIAS(sw0)
 
 /* GPIO specs */
-//static const struct gpio_dt_spec led    = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
-//static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
+static const struct gpio_dt_spec led    = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
 
 /* EIK string */
 static char *eik_string = "2ba7b1af37bb6606deb507fc13f4b9d4697e88c80c5165b56c2de4cfe15996e2";
@@ -115,7 +115,7 @@ int main(void)
     printk("EID: %s\n", eid_string);
 
     /* Configure LEDs and buttons */
-    /*if (!gpio_is_ready_dt(&led) || !gpio_is_ready_dt(&button)) {
+    if (!gpio_is_ready_dt(&led) || !gpio_is_ready_dt(&button)) {
         printk("GPIO not ready\n");
         return 0;
     }
@@ -128,12 +128,11 @@ int main(void)
     if (ret < 0) {
         printk("Button config failed\n");
         return 0;
-    }*/
+    }
 
     /* Main loop: toggle LED on button press */
     while (1) {
-        //printk("EID: %s\n", eid_string);
-        /*if (gpio_pin_get_dt(&button)) {
+        if (gpio_pin_get_dt(&button)) {
             gpio_pin_toggle_dt(&led);
 
             #ifndef DISABLE_BT
@@ -157,7 +156,6 @@ int main(void)
             while (gpio_pin_get_dt(&button)) {
                 k_sleep(K_MSEC(10));
             }
-        }*/
-        k_sleep(K_MSEC(1000));
+        }
     }
 }

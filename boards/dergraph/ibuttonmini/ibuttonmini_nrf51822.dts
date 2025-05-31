@@ -24,7 +24,7 @@
 		zephyr,bt-c2h-uart = &uart0;
 	};
 
-	/*leds {
+	leds {
 		compatible = "gpio-leds";
 
 		led0: led_0 {
@@ -51,24 +51,24 @@
 			zephyr,code = <INPUT_KEY_0>;
 		};
 
-	};*/
+	};
 
 	/* These aliases are provided for compatibility with samples */
 	aliases {
-		//led0 = &led0;
-		//pwm-led0 = &pwm_led0;
-		//sw0 = &button0;
+		led0 = &led0;
+		pwm-led0 = &pwm_led0;
+		sw0 = &button0;
 		watchdog0 = &wdt0;
 	};
 };
 
-&uart0 {
+/*&uart0 {
 	current-speed = <115200>;
 	status = "okay";
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-1 = <&uart0_sleep>;
 	pinctrl-names = "default", "sleep";
-};
+};*/
 
 &sw_pwm {
 	status ="okay";
