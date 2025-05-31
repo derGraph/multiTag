@@ -31,10 +31,10 @@ int GoogleFhd::init()
 }
 
 int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
-    uint8_t input[32];
+    static uint8_t input[32];
     static uint8_t __aligned(4) r_dash[32];
     const uECC_Curve curve = uECC_secp160r1();
-    struct AES_ctx ctx;
+    static struct AES_ctx ctx;
 
     // 1) Build the 32-byte AES input
     memset(input, 0xFF, 11);
@@ -62,9 +62,9 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
 
     // 4) Convert r_dash to bignum and compute r' mod n
     // Initialize bignum structures
-    struct bn r_dash_bn;
-    struct bn n_bn;
-    struct bn r_bn;
+    static struct bn r_dash_bn;
+    static struct bn n_bn;
+    static struct bn r_bn;
 
     bignum_init(&r_dash_bn);
     bignum_init(&n_bn);
@@ -88,8 +88,8 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
 
     // Step 5: Compute public key R = r * G
     // Move r_bytes into a 21-byte array
-    uint8_t r_bytes[21];
-    uint8_t temp_r_bytes[20];
+    static uint8_t r_bytes[21];
+    static uint8_t temp_r_bytes[20];
     if(bignum_to_bytes(&r_bn, temp_r_bytes, sizeof(temp_r_bytes)) != 0) {
         printk("Error: Failed to convert r to bytes\n");
         return -1; // Error in converting r to bytes
@@ -98,7 +98,7 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     r_bytes[0] = 0;
 
     // Compute public key
-    uint8_t R[40];
+    static uint8_t R[40];
     if(uECC_compute_public_key(r_bytes, R, curve) != 1)
     {
         printk("Error: uECC_compute_public_key failed\n");
