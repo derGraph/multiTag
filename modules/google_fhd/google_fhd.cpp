@@ -33,8 +33,7 @@ int GoogleFhd::init()
 int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     uint8_t input[32];
     static uint8_t __aligned(4) r_dash[32];
-    //const struct uECC_Curve_t *curve = uECC_secp160r1();
-    //int num_bytes = uECC_curve_num_bytes(curve); // should be 20 bytes for SECP160R1
+    uECC_Curve curve = uECC_secp160r1();
     struct AES_ctx ctx;
 
     // 1) Build the 32-byte AES input
@@ -66,40 +65,45 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     struct bn r_dash_bn;
     struct bn n_bn;
     struct bn r_bn;
-    struct bn test_bn;
 
     bignum_init(&r_dash_bn);
     bignum_init(&n_bn);
     bignum_init(&r_bn);
 
-    bignum_init(&test_bn);
+    // Convert r_dash to bignum from bytes
+    if(bignum_from_bytes(&r_dash_bn, r_dash, sizeof(r_dash)) != 0) {
+        printk("Error: Failed to convert r_dash to bignum\n");
+        return -1; // Error in converting r_dash to bignum
+    }; 
 
-    bignum_from_bytes(&r_dash_bn, r_dash, sizeof(r_dash)); // Convert r_dash to bignum
-
-    // TRY TO GET N FROM uECC_secp160r1
-    if(bignum_from_string(&n_bn, "0000000100000000000000000001f4c8f927aed3ca752257", 48) == -1){
-        printk("Error converting n to bignum\n");
-        return -1; // Error: failed to convert n to bignum
+    // Convert uECC_secp160r1 from bytes
+    const uint8_t n_bytes[24] = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xF4, 0xC8, 0xF9, 0x27, 0xAE, 0xD3, 0xCA, 0x75, 0x22, 0x57};
+    if(bignum_from_bytes(&n_bn, n_bytes, sizeof(n_bytes)) != 0) {
+        printk("Error: Failed to convert n to bignum\n");
+        return -1; // Error in converting n to bignum
     }
 
     // Calculate r = r' mod n
     bignum_mod(&r_dash_bn, &n_bn, &r_bn);
 
-    char r_hex[37];
-    bignum_to_string(&r_bn, r_hex, sizeof(r_hex)/sizeof(r_hex[0]));
-    printk("r = %s\n", r_hex);
+    // Step 5: Compute public key R = r * G
+    // Move r_bytes into a 21-byte array
+    uint8_t r_bytes[21];
+    uint8_t temp_r_bytes[20];
+    if(bignum_to_bytes(&r_bn, temp_r_bytes, sizeof(temp_r_bytes)) != 0) {
+        printk("Error: Failed to convert r to bytes\n");
+        return -1; // Error in converting r to bytes
+    }
+    memcpy(&r_bytes[1], temp_r_bytes, sizeof(temp_r_bytes));
+    r_bytes[0] = 0;
 
-    // VALIDATED UNTIL HERE
-
-    //bignum_to_string(&result_bn, final_r_str, sizeof(final_r_str));
-    //printk("r_dash_int %% n = %s\n", final_r_str);
-
-    // Step 5: Compute R = r * G
-    uint8_t R[40]; // 2 * num_bytes
-    // COMPUTE R WITH BIGNUM LIBRARY THEN CONVERT WITH hex_string_to_bytes
-    uint8_t r_bytes[21]; // 21 bytes for SECP160R1 private key
-    const struct uECC_Curve_t *curve = uECC_secp160r1();
-    uECC_compute_public_key(r_bytes, R, curve);
+    // Compute public key
+    uint8_t R[40];
+    if(uECC_compute_public_key(r_bytes, R, curve) != 1)
+    {
+        printk("Error: uECC_compute_public_key failed\n");
+        return -1; // Error in computing public key
+    }
 
     // Step 6: Return x-coordinate (first 20 bytes)
     memcpy(eid, R, 20);
@@ -261,11 +265,11 @@ int GoogleFhd::bignum_from_bytes(struct bn* n, const uint8_t* bytes, int nbytes)
         return -1; // Error: invalid size
     }
     if((nbytes & 1) != 0) {
-        printk("bignum_from_bytes: string format must be in hex -> equal number of bytes\n");
+        printk("bignum_from_bytes: byte format must be in hex -> equal number of bytes\n");
         return -1; // Error: invalid format
     }
     if((nbytes % (sizeof(DTYPE) * 2)) != 0) {
-        printk("bignum_from_bytes: string length must be a multiple of (sizeof(DTYPE) * 2) characters\n");
+        printk("bignum_from_bytes: byte length must be a multiple of (sizeof(DTYPE) * 2) characters\n");
         return -1; // Error: invalid length
     }
 
@@ -294,6 +298,39 @@ int GoogleFhd::bignum_from_bytes(struct bn* n, const uint8_t* bytes, int nbytes)
         j += 1;
     }
     return 0; // Successfully parsed the string into the bignum structure
+}
+
+int GoogleFhd::bignum_to_bytes(struct bn* n, uint8_t bytes[], int size){
+    if(n == NULL || bytes == NULL) {
+        printk("bignum_to_bytes: null pointer error\n");
+        return -1; // Error: null pointer
+    }
+
+    for(int i = 0; i < size; i++) {
+        bytes[i] = 0; // Initialize the byte array to zero
+    }
+
+    bool leading_zeros = true;
+    int byte_counter = 0;
+    for(int i=0; i < BN_ARRAY_SIZE; i++) {
+        uint32_t word = n->array[BN_ARRAY_SIZE-i-1];
+        if(byte_counter > size) {
+
+        }
+        if(!(word == 0 && leading_zeros)) {
+            leading_zeros = false; 
+            if((byte_counter * WORD_SIZE) > size ) {
+                printk("bignum_to_bytes: byte size is too small\n");
+                return -1; // Error: byte size is too small
+            }
+            for(int j = 0; j < WORD_SIZE; j++) {
+                bytes[byte_counter * WORD_SIZE + j] = (word >> ((WORD_SIZE - 1 - j) * 8)) & 0xFF;
+            }
+            byte_counter++;
+        }
+    }
+
+    return 0; // Successfully converted bignum to bytes
 }
 
 void check(bool condition, const char* message) {
