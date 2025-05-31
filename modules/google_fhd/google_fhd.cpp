@@ -33,7 +33,7 @@ int GoogleFhd::init()
 int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     uint8_t input[32];
     static uint8_t __aligned(4) r_dash[32];
-    uECC_Curve curve = uECC_secp160r1();
+    const uECC_Curve curve = uECC_secp160r1();
     struct AES_ctx ctx;
 
     // 1) Build the 32-byte AES input
