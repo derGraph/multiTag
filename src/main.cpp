@@ -103,13 +103,14 @@ int main(void)
         printk("LED config failed\n");
         return 0;
     }
-    ret = gpio_pin_configure_dt(&button, GPIO_INPUT);
+    ret = gpio_pin_configure_dt(&button, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
         printk("Button config failed\n");
         return 0;
     }
 
     gpio_pin_set_dt(&led, 0); // Turn on LED initially
+    gpio_pin_set_dt(&button, 0); // Turn on Button LED initially
 
     /* Initialize BLE subsystem */
     err = bt_enable(NULL);
@@ -134,11 +135,6 @@ int main(void)
         settings.set_time(1);
     }
 
-    //settings.set_eik(googleFhd.eik); // Store EIK in settings
-    /* --- NEW ADVERTISING SECTION END --- */
-
-    /* Main loop: toggle LED on button press */
-
     int startTime = settings.get_time();
     int lastSettings = k_uptime_get() + settings.get_time();
     int lastSwitch = lastSettings-20000;
@@ -156,10 +152,7 @@ int main(void)
             lastSwitch = now;
             bt_le_adv_stop();
             err = bt_le_adv_start(&googleFhd.adv_param, googleFhd.adv_data, 2, NULL, 0);
-            if (err) {
-                printk("Advertising failed to start (err %d)\n", err);
-            }
-            printk("Advertising successfully started\n");
         }
+        k_sleep(K_SECONDS(10)); // Sleeps for 10 seconds in low power
     }
 }
