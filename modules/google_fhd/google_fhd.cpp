@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <zephyr/sys/byteorder.h>
+#include <zephyr/bluetooth/bluetooth.h>
 
 extern "C" {
     #include "bn.h"
@@ -18,6 +19,11 @@ extern "C" {
 
 #include "google_fhd.h"
 
+// Static member definitions
+struct bt_le_adv_param GoogleFhd::adv_param = {};
+struct bt_data GoogleFhd::adv_data[2] = {};
+struct fmdn_service_data_t GoogleFhd::fmdn_service_data = {0xFEAA, 0x41, {0}, 0x0};
+
 GoogleFhd::GoogleFhd()
 {
     initialized = false;
@@ -27,6 +33,7 @@ GoogleFhd::GoogleFhd()
 int GoogleFhd::init()
 {   
     initialized = true;
+    lastLoop = -1025*1000;
     return 0;
 }
 
@@ -108,6 +115,28 @@ int GoogleFhd::generate_eid_160(uint32_t timestamp, uint8_t eid[20]) {
     // Step 6: Return x-coordinate (first 20 bytes)
     memcpy(eid, R, 20);
     return 0;
+}
+
+void GoogleFhd::loop(int time) {
+    if(lastLoop+(1024*1000) < time) {
+        lastLoop = time;
+        generate_eid_160(time, eid);
+
+        // Update the EID in the static service data
+        memcpy(fmdn_service_data.eid, eid, sizeof(fmdn_service_data.eid));
+
+        // Set advertising parameters (only needs to be done once, but safe to repeat)
+        adv_param = {
+            .options = BT_LE_ADV_OPT_USE_IDENTITY,
+            .interval_min = 3200,
+            .interval_max = 3200,
+        };
+
+        // Use static flags data
+        static const uint8_t flags = 0x06;
+        adv_data[0] = BT_DATA(BT_DATA_FLAGS, (unsigned char *)&flags, sizeof(flags));
+        adv_data[1] = BT_DATA(BT_DATA_SVC_DATA16, (unsigned char *)&fmdn_service_data, sizeof(fmdn_service_data));
+    }
 }
 
 int GoogleFhd::hex_string_to_bytes(const char *hex, uint8_t *bytes, size_t len) {

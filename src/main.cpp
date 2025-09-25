@@ -6,11 +6,16 @@
 
 #include <stdio.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/reboot.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/gatt.h>
 #include "google_fhd.h"
+#include "settings.h"
 
+#define STORAGE_PARTITION   storage_partition
+#define STORAGE_PARTITION_ID      FIXED_PARTITION_ID(STORAGE_PARTITION)
 
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1000
@@ -22,11 +27,11 @@
 #define BUTTON0_NODE DT_ALIAS(sw0)
 
 /* GPIO specs */
-static const struct gpio_dt_spec led    = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
+static const struct gpio_dt_spec led     = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(BUTTON0_NODE, gpios);
 
 /* EIK string */
-static char *eik_string = "2ba7b1af37bb6606deb507fc13f4b9d4697e88c80c5165b56c2de4cfe15996e2";
+static char *eik_string = "131f666fcbd2912bed50b94ff72af165d3353ed1c853a98519fb8ebbc25abc56";
 
 /* Single 128-bit UUID (little-endian) */
 #define MY_UUID_BYTES \
@@ -57,30 +62,31 @@ GoogleFhd googleFhd;
 /* Callback for connection events */
 static void connected(struct bt_conn *conn, uint8_t err)
 {
-	if (err) {
-		printk("Connection failed (err %u)\n", err);
-		current_conn = NULL;
-		return;
-	}
+    if (err) {
+        printk("Connection failed (err %u)\n", err);
+        current_conn = NULL;
+        return;
+    }
 
-	printk("Connected\n");
-	current_conn = bt_conn_ref(conn); // Store reference to the connection
+    printk("Connected\n");
+    current_conn = bt_conn_ref(conn); // Store reference to the connection
 }
 
 /* Callback for disconnection events */
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
-	printk("Disconnected (reason %u)\n", reason);
-	if (current_conn) {
-		bt_conn_unref(current_conn);
-		current_conn = NULL;
-	}
+    printk("Disconnected (reason %u)\n", reason);
+    if (current_conn) {
+        current_conn = NULL;
+    }
+    sys_reboot(SYS_REBOOT_WARM);
 }
+
 
 // Connection callbacks struct
 BT_CONN_CB_DEFINE(conn_callbacks) = {
-	.connected = connected,
-	.disconnected = disconnected,
+    .connected = connected,
+    .disconnected = disconnected,
 };
 
 int main(void)
@@ -113,30 +119,6 @@ int main(void)
     }
     printk("Bluetooth initialized\n");
     
-    /* Advertising parameters: connectable + name in scan response */
-    static const struct bt_le_adv_param *gatt_adv_param = BT_LE_ADV_PARAM(
-        BT_LE_ADV_OPT_CONN,
-        BT_GAP_ADV_FAST_INT_MIN_2,
-        BT_GAP_ADV_FAST_INT_MAX_2,
-        NULL
-    );
-
-    /* Advertising data: flags only */
-    static const struct bt_data gatt_ad[] = {
-        BT_DATA_BYTES(BT_DATA_FLAGS,
-                      (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-        BT_DATA(BT_DATA_UUID128_ALL,
-                my_uuid_bytes,
-                sizeof(my_uuid_bytes)),
-    };
-
-    /* Scan-response data: full device name */
-    static const struct bt_data gatt_sd[] = {
-        BT_DATA(BT_DATA_NAME_COMPLETE,
-                CONFIG_BT_DEVICE_NAME,
-                sizeof(CONFIG_BT_DEVICE_NAME) - 1),
-    };
-
     /* Initialize Google FHD and generate an EID */
     if (googleFhd.init() < 0) {
         printk("GoogleFhd init failed\n");
@@ -146,42 +128,38 @@ int main(void)
         printk("Set EIK failed\n");
         return 0;
     }
-    uint8_t new_eid[20];
-    googleFhd.generate_eid_160(0, new_eid);
-
-    gpio_pin_set_dt(&led, 1); // Turn on LED initially
-
-    /* Start advertising */
-    err = bt_le_adv_start(gatt_adv_param, gatt_ad, ARRAY_SIZE(gatt_ad), gatt_sd, ARRAY_SIZE(gatt_sd));
-    if (err) {
-        printk("Advertising failed to start (err %d)\n", err);
-        return 0;
+    if (settings.init() < 0) { // Initialize settings subsystem
+        printk("Settings init failed\n");
+        settings.set_eik(googleFhd.eik);
+        settings.set_time(1);
     }
-    printk("Advertising successfully started\n");
+
+    //settings.set_eik(googleFhd.eik); // Store EIK in settings
+    /* --- NEW ADVERTISING SECTION END --- */
 
     /* Main loop: toggle LED on button press */
+
+    int startTime = settings.get_time();
+    int lastSettings = k_uptime_get() + settings.get_time();
+    int lastSwitch = lastSettings-20000;
     while (1) {
-        if (gpio_pin_get_dt(&button)) {
-            gpio_pin_toggle_dt(&led);
+        int now = k_uptime_get() + startTime;
+        if (lastSettings + (120*1000) < now) {
+            settings.set_time(now);
+            lastSettings = now;
+            now = k_uptime_get() + startTime;
+        }
 
-			err = bt_gatt_notify(
-				nullptr,
-				&multiTag.attrs[1],
-				notify_value,
-				sizeof(notify_value)
-			);
+        googleFhd.loop(now);
 
-			notify_value[0]++;
-
-			if (err) {
-				printk("Notify failed (err %d)\n", err);
-			} else {
-				printk("Notification sent: %02x\n", notify_value[0]);
-			}
-
-            while (gpio_pin_get_dt(&button)) {
-                k_sleep(K_MSEC(10));
+        if (lastSwitch + (20*1000) < now) {
+            lastSwitch = now;
+            bt_le_adv_stop();
+            err = bt_le_adv_start(&googleFhd.adv_param, googleFhd.adv_data, 2, NULL, 0);
+            if (err) {
+                printk("Advertising failed to start (err %d)\n", err);
             }
+            printk("Advertising successfully started\n");
         }
     }
 }
